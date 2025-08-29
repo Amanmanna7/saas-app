@@ -3,6 +3,8 @@
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { createCompanion } from "@/lib/actions/companion.actions"
+import { redirect } from "next/navigation"
 
 import {
   Form,
@@ -50,8 +52,16 @@ const CompanionForm = () => {
   })
  
   // 2. Define a submit handler.
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values)
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const companion =  await createCompanion(values);
+
+    if(companion) {
+      redirect(`/companions/${companion.id}`);
+    }
+    else{
+      console.log("Failed to create companion");
+      redirect("/");
+    }
   }
   return (
     <Form {...form}>
@@ -175,7 +185,36 @@ const CompanionForm = () => {
             <FormItem>
               <FormLabel>Estimated session duration in minutes</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="15" {...field} className="input"/>
+                <Input
+                  type="number"
+                  placeholder="15"
+                  className="input"
+                  value={
+                    field.value === undefined || field.value === null
+                      ? ""
+                      : field.value
+                  }
+                  onChange={e => {
+                    const val = e.target.value;
+                    // If input is empty, set to 1 (minimum allowed)
+                    if (val === "") {
+                      field.onChange(1);
+                    } else if (val.length === 1) {
+                      // If only 1 digit left, allow it as is
+                      const num = Number(val);
+                      if (!isNaN(num)) {
+                        field.onChange(num);
+                      }
+                    } else {
+                      // For more than 1 digit, parse as number
+                      const num = Number(val);
+                      if (!isNaN(num)) {
+                        field.onChange(num);
+                      }
+                    }
+                  }}
+                  min={1}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
